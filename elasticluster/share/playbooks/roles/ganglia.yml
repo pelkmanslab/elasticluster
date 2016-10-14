@@ -1,20 +1,23 @@
 ---
-- name: Ganglia frontend/collector Playbook
-  hosts: ganglia_master
+- name: Init OS for Ganglia playbooks
+  hosts:
+    - ganglia_master
+    - ganglia_monitor
   tasks:
-    - include: 'common/tasks/init-{{ansible_os_family}}.yml'
-    - include: ganglia/tasks/server.yml
+    - include: common/tasks/init-{{ansible_os_family}}.yml
   tags:
     - ganglia
-  handlers:
-    - include: ganglia/handlers/main.yml
 
-- name: Ganglia monitor Playbook
+- name: Ganglia frontend/collector (server) Playbook
+  hosts: ganglia_master
+  roles:
+    - ganglia-server
+  tags:
+    - ganglia
+
+- name: Ganglia monitor (client) Playbook
   hosts: ganglia_monitor
-  tasks:
-    - include: 'common/tasks/init-{{ansible_os_family}}.yml'
-    - include: ganglia/tasks/client.yml
-  handlers:
-    - include: ganglia/handlers/main.yml
+  roles:
+    - ganglia-client
   tags:
     - ganglia
