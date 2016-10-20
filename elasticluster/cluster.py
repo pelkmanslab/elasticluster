@@ -1145,6 +1145,11 @@ class Node(Struct):
         `update_ips`:meth: methods should be used to further gather details
         about the state of the node.
         """
+        if 'volumes' in self.extra:
+            volume_size = self.extra['volumes'].strip()
+            volume_name = '%s_volume' % self.name
+            log.info("Creating volume %s ...", volume_name)
+            volume = self._cloud_provider.create_volume(volume_size, volume_name)
         log.info("Starting node %s ...", self.name)
         self.instance_id = self._cloud_provider.start_instance(
             self.user_key_name, self.user_key_public, self.user_key_private,
@@ -1154,6 +1159,9 @@ class Node(Struct):
             node_name=("%s-%s" % (self.cluster_name, self.name)),
             **self.extra)
         log.debug("Node `%s` has instance ID `%s`", self.name, self.instance_id)
+        if 'volumes' in self.extra:
+            log.info("Attaching volume to node %s ...", volume_name, self.name)
+            self._cloud_provider.attach_volume(volume.id, self.instance_id)
 
 
     def stop(self, wait=False):

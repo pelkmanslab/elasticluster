@@ -34,8 +34,28 @@ class AbstractCloudProvider:
 
         Usually these are configuration option of the corresponding
         `setup` section in the configuration file.
+
+        The constructor of the derived class must set the ``client`` and
+        ``storage_client`` attributes for managing `instances` and `volumes`,
+        respectively.
         """
         pass
+
+    @abstractmethod
+    def create_volume(self, size, name):
+        """Creates a new volume on the cloud with the given `size`."""
+
+    @abstractmethod
+    def attach_volume(self, volume_id, instance_id, mount_point):
+        """Attaches a volume to a virtual machine instance at `mount_point`."""
+
+    @abstractmethod
+    def delete_volume(self, volume_id):
+        """Deletes a volume."""
+
+    @abstractmethod
+    def detach_volume(self, volume_id, instance_id):
+        """Detaches a volume from a virtual machine instance."""
 
     @abstractmethod
     def start_instance(self, key_name, public_key_path, private_key_path,
