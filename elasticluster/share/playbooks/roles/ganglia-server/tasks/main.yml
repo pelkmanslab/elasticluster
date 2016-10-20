@@ -1,0 +1,40 @@
+---
+- name: Install ganglia server (Ubuntu)
+  apt: pkg={{item}} state=latest update_cache=yes cache_valid_time=3600
+  become: yes
+  with_items:
+    - ganglia-monitor
+    - ganglia-webfrontend
+    - gmetad
+
+- name: Configure apache link
+  file: src=/etc/ganglia-webfrontend/apache.conf dest=/etc/apache2/conf.d/ganglia.conf state=link
+  notify: restart apache
+  when: is_debian_or_ubuntu and not is_ubuntu_trusty
+  become: yes
+  tags:
+    - ganglia
+
+- name: Configure apache link (conf-available)
+  file: src=/etc/ganglia-webfrontend/apache.conf dest=/etc/apache2/conf-available/ganglia.conf state=link
+  when: is_ubuntu_trusty
+  become: yes
+  tags:
+    - ganglia
+
+- name: Configure apache link (conf-enabled)
+  file: src=/etc/apache2/conf-available/ganglia.conf dest=/etc/apache2/conf-enabled/ganglia.conf state=link
+  notify: restart apache
+  when: is_ubuntu_trusty
+  become: yes
+  tags:
+    - ganglia
+
+
+- name: Configure gemetad
+  template: src=gmetad.conf.j2 dest=/etc/ganglia/gmetad.conf
+  notify: restart gmetad
+  become: yes
+  tags:
+    - ganglia
+

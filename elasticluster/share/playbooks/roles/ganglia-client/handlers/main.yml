@@ -1,0 +1,15 @@
+---
+# handlers file for monitor-ganglia-client
+- name: restart apache
+  service: name=apache2 state=restarted
+  when: is_debian_or_ubuntu
+
+# gmetad and ganglia-monitor init scripts does not support `status`
+# argument.
+- name: restart gmond
+  service: name=ganglia-monitor state=restarted
+  when: is_debian_or_ubuntu
+
+- name: restart gmetad
+  service: name=gmetad state=restarted
+  when: '"ganglia_server" in group_names'

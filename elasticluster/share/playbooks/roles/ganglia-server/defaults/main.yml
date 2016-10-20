@@ -1,0 +1,6 @@
+---
+clusters:
+  - name: GC3_Cluster
+    hosts: localhost
+
+grid_name: GC3_Grid
