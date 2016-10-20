@@ -206,6 +206,31 @@ class GoogleCloudProvider(AbstractCloudProvider):
                 status = response['status']
         return response
 
+    def create_volume(self, size, name):
+        """Creates a new volume on the cloud with the given `size` and `name`.
+        """
+        raise NotImplementedError(
+            'The functionality to create volumes is not yet available for %s',
+            self.__class__.__name__)
+
+    def attach_volume(self, volume_id, instance_id, mount_point):
+        """Attaches a volume to a virtual machine instance at `mount_point`."""
+        raise NotImplementedError(
+            'The functionality to attach volumes is not yet available for %s',
+            self.__class__.__name__)
+
+    def delete_volume(self, volume_id):
+        """Deletes a volume."""
+        raise NotImplementedError(
+            'The functionality to delete volumes is not yet available for %s',
+            self.__class__.__name__)
+
+    def detach_volume(self, volume_id, instance_id):
+        """Detaches a volume from a virtual machine instance."""
+        raise NotImplementedError(
+            'The functionality to detach volumes is not yet available for %s',
+            self.__class__.__name__)
+
     def start_instance(self,
                        # these are common to any
                        # CloudProvider.start_instance() call

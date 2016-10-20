@@ -25,11 +25,15 @@ __author__ = 'Antonio Messina <antonio.s.messina@gmail.com>'
 
 # System imports
 import os
+import sys
+import logging
 import threading
 from warnings import warn
 
 # External modules
-from novaclient import client
+import cinderclient.client
+from cinderclient.exceptions import NoUniqueMatch
+import novaclient.client
 from novaclient.exceptions import NotFound
 from paramiko import DSSKey, RSAKey, PasswordRequiredException
 from paramiko.ssh_exception import SSHException
@@ -49,6 +53,9 @@ from elasticluster.exceptions import (
 )
 
 DEFAULT_OS_NOVA_API_VERSION = "2"
+
+logger = logging.getLogger(__name__)
+
 
 class OpenStackCloudProvider(AbstractCloudProvider):
     """
@@ -83,10 +90,67 @@ class OpenStackCloudProvider(AbstractCloudProvider):
         self.nova_api_version = nova_api_version
         self._instances = {}
         self._cached_instances = {}
+        self._volumes = {}
 
-        self.client = client.Client(self.nova_api_version,
-                                    self._os_username, self._os_password, self._os_tenant_name,
-                                    self._os_auth_url, region_name=self._os_region_name)
+        logger.debug('create nova client')
+        self.client = novaclient.client.Client(
+            self.nova_api_version,
+            self._os_username, self._os_password, self._os_tenant_name,
+            self._os_auth_url, region_name=self._os_region_name)
+
+        logger.debug('create cinder client')
+        self.storage_client = cinderclient.client.Client(
+            self.nova_api_version,
+            self._os_username, self._os_password, self._os_tenant_name,
+            self._os_auth_url, region_name=self._os_region_name)
+
+    def create_volume(self, size, name):
+        """Creates a new volume on the cloud with the given `size` and `name`.
+        """
+        # Check if the volume already exists. Create it if not.
+        size = int(size)
+        try:
+            volume = self.storage_client.volumes.find(name=name)
+            logger.info('volumne "%s" already exists: id=%d', volume.id)
+        except NoUniqueMatch:
+            logger.info('create volume "%s" with (%s) GB', name, size)
+            volume = self._cinder.volumes.create(size=size, name=name)
+            logger.info('volume "%s" created: id=%d', volume.name, volume.id)
+        #TODO: is this asynchronous? if so we may want wait until volume is
+        # has actually been created before we return
+        # By repeadedly calling
+        # self.storage_client.volumes.get(volume_id)
+        # ???
+        return volume
+
+    def attach_volume(self, volume_id, instance_id, mount_point='/dev/vdb'):
+        """Attaches a volume to a virtual machine instance at `mount_point`."""
+        logger.info('attach volume %d to instance %d', volume_id, server_id)
+        # instance = self.client.servers.get(server_id)
+        # self.storage_client.volumes.attach(volume_id, server_id,
+        #                                    self.volume_mount_point,
+        #                                    host_name=instance.name)
+        self.client.volumes.create_server_volume(instance_id, volume_id,
+                                                 self.volume_mount_point)
+        #TODO: is this asynchronous? if so we may want wait until volume is
+        # has actually been attached before we return
+        # By repeadedly calling
+        # self.client.volumes.get_server_volume(instance_id, volume_id)
+        # ???
+
+    def delete_volume(self, volume_id):
+        """Deletes a volume."""
+        try:
+            volume = self.storage_client.volumes.find(name=name)
+            logger.info('delete volume %d', volume_id)
+            self.storage_client.volumes.delete(volume)
+        except NoUniqueMatch:
+            logger.error('volume %d does not exists', volume_id)
+            sys.exit(1)
+
+    def detach_volume(self, volume_id, instance_id):
+        """Detaches a volume from a virtual machine instance."""
+        self.client.volumes.delete_server_volume(instance_id, volume_id)
 
     def start_instance(self, key_name, public_key_path, private_key_path,
                        security_group, flavor, image_id, image_userdata,
